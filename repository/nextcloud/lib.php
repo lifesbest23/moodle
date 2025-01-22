@@ -857,6 +857,7 @@ class repository_nextcloud extends repository {
                     'children' => array(),
                     'datemodified' => $item['lastmodified'],
                     'sharable' => true,
+                    'source' => $item['href'],
                     'path' => $item['href']
                 );
             } else {
