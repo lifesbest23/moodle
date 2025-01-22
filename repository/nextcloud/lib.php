@@ -818,6 +818,7 @@ class repository_nextcloud extends repository {
                     'thumbnail' => $OUTPUT->image_url(file_folder_icon())->out(false),
                     'children' => array(),
                     'datemodified' => $item['lastmodified'],
+                    'sharable' => true,
                     'path' => $item['href']
                 );
             } else {

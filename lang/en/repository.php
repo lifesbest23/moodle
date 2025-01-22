@@ -266,3 +266,11 @@ $string['privacy:metadata:repository_instances:username'] = 'The optional userna
 $string['privacy:metadata:repository_instances:password'] = 'The optional password configured for the repository instance.';
 $string['privacy:metadata:repository_instances:timecreated'] = 'The date/time of creation for the repository instance.';
 $string['privacy:metadata:repository_instances:timemodified'] = 'The date/time of modification of the repository instance.';
+
+
+$string['sharefolder'] = 'Share folder';
+$string['sharename'] = 'Share name';
+$string['selectfolder'] = 'Select target folder';
+$string['sharingcreated'] = 'Public share created successfully';
+$string['sharingfailed'] = 'Failed to create public share';
+$string['missingparams'] = 'Missing required sharing parameters';
