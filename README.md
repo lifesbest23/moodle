@@ -127,14 +127,14 @@ Jetzt sollte alles funktionieren!
 - **Anforderungen:**
 	- [x] Hinzufügen eines Share Icons neben Nextcloud Ordnern
 	- [?] Öffnen eines gesonderten Dialogs
-	- [ ]  Hinzufügen des Ordnerlinks als Dateiressource
+	- [x]  Hinzufügen des Ordnerlinks als Dateiressource
 - **Technische Details:**
-    - Die Nextcloud splzifischen interaktion des backends ist in `repository/nextcloud/lib.php` definiert, bei der ich nextcloud Ordnern einen zusätzlichen wert vergebe
-    - Die Frontend interaktion findet in `repository/filepicker.js` statt, welches als YUI Modul implementiert ist.
-	    - Dort habe ich die rendering funktion bisher vom Listview, als auch vom Treeview so angepasst, dass ein share icon daneben erscheint
-	- Beim clicken wird die funktion `show_folder_share_dialog` gestartet, die aber leider noch bei weitem nicht vollständig ist und fehler produziert
+    - Die Nextcloud spezifischen interaktion des backends ist in `repository/nextcloud/lib.php` definiert, bei der ich nextcloud Ordnern einen zusätzlichen wert vergebe sowie die Funktionen um zu prüfen, ob es sich um einen Ordner handelt, und um für diesen einen Link zu generieren.
+    - Die Frontend interaktion findet in `repository/filepicker.js` statt, 
+	- Dort habe ich die rendering funktion bisher vom IconView, als auch vom Treeview so angepasst, dass ein share icon neben dem Ordnernamen erscheint
+    - Beim klicken wird die funktion `select_file` aufgerufen, die bisher den gleichen Dialog wie zum speichern von Dateien aufruft, nicht alle multiple choice Elemente sind valide
 - **Limitations:** 
-	- Ich hatte versucht meinen Lösungsansatz der Funktionalität des `select_file` dialogs anzupassen, habe aber dafür leider nicht gut genug das Zusammenspiel von YUI Modulen und den mustache templates verstanden.
+    - Bisher wird lediglich ein Link zum komprimierten Download des Ordners auf Moodle angezeigt, es sollte aber der gesamte Dateibaum auch Syncronisiert werden, laut den Anforderungen
 
 
 # Moodle
