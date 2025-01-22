@@ -289,6 +289,44 @@ class repository_nextcloud extends repository {
     }
 
     /**
+     * CHeck if the given path is a folder.uurl/
+     *
+     * @param string $path
+     * @return bool
+     */
+    public function is_folder($path) {
+        // Implement logic to check if the path is a folder
+        // For example, you might use the Nextcloud API to check the type of the path
+        $params = ['path' => $path];
+        $response = $this->ocsclient->call('get_metadata', $params);
+        $xml = simplexml_load_string($response);
+
+        // Check if the response indicates that the path is a folder
+        return (string) $xml->data->type === 'folder';
+    }
+
+    /**
+     * Get the link to the folder.
+     *
+     * @param string $path
+     * @return string
+     */
+    public function get_folder_link($path) {
+        // Implement logic to get the public link for the folder using the Nextcloud API
+        $params = [
+            'path' => $path,
+            'shareType' => ocs_client::SHARE_TYPE_PUBLIC,
+            'publicUpload' => false,
+            'permissions' => ocs_client::SHARE_PERMISSION_READ
+        ];
+        $response = $this->ocsclient->call('create_share', $params);
+        $xml = simplexml_load_string($response);
+
+        // Extract and return the folder link from the response
+        return (string) $xml->data->url;
+    }
+
+    /**
      * Use OCS to generate a public share to the requested file.
      * This method derives a download link from the public share URL.
      *
