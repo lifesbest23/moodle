@@ -40,7 +40,59 @@ sudo apt install certbot python3-certbot-nginx
 ufw allow 'Nginx Full'
 certbot --nginx -d example.com
 ```
-8. nginx config fuer moodle
+8. nginx config fuer moodle und /etc/nginx/sites-available/server.dns.net editieren und als einziges in sites-enabled verlinken
+```
+server {
+    server_name server.dns.net;
+
+    root /var/www/moodle;
+    index index.php index.html;
+
+    location / {
+          try_files $uri $uri/ =404;
+    }
+
+    location ~ [^/]\.php(/|$) {
+        fastcgi_split_path_info  ^(.+\.php)(/.+)$;
+        fastcgi_param   PATH_INFO       $fastcgi_path_info;
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+    # This passes 404 pages to Moodle so they can be themed
+    error_page 404 /error/index.php;
+    error_page 403 =404 /error/index.php;
+
+    # Hide all dot files but allow "Well-Known URIs" as per RFC 5785
+    location ~ /\.(?!well-known).* {
+                return 404;
+    }
+
+    # This should be after the php fpm rule and very close to the last nginx ruleset.
+    # Don't allow direct access to various internal files. See MDL-69333
+        location ~ (/vendor/|/node_modules/|composer\.json|/readme|/README|readme\.txt|/upgrade\.txt|/UPGRADING\.md|db/install\.xml|/fixtures/|/behat/|phpunit\.xml|\.lock|environment\.xml) {
+        deny all;
+        return 404;
+        }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/server.dns.net.net/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/server.dns.net/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+}
+server {
+    if ($host = server.dns.net) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+    
+    listen 80;
+    server_name server.dns.net;
+    return 404; # managed by Certbot
+}
+```
 9. moodle in /var/www/ installieren
 ```
 git clone https://github.com/moodle/moodle.git
@@ -59,7 +111,12 @@ chmod -R 777 /var/moodledata
 CREATE USER moodleuser WITH PASSWORD '<password>';
 CREATE DATABASE moodle WITH OWNER <user>;
 ```
-12. Moodle installation starten im web und admin hinzufügen
+12. Moodle installation starten im web und admin hinzufügen, davor und danach moodle order für www-data user freigen und wieder sperren um config.php zu erstellen
+```
+chown www-data /var/www/moodle
+... Installation ...
+chown new_user /var/www/moodle
+```
 13. Mit Nextcloud als Oauth2 Provider verbinden und als repository verbinden [Doku](https://docs.moodle.org/405/de/Nextcloud_Repository)
 
 Jetzt sollte alles funktionieren!
