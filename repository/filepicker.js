@@ -218,6 +218,8 @@ YUI.add('moodle-core_filepicker', function(Y) {
                 filenamediv.createShareIcon(function(e, nd) {
                     // Implement share link functionality here
                     //alert('Share link for folder: ' + node.path);
+                    nd.share_folder = true;
+                    e.preventDefault();
                     Y.bind(options.callback, this)(e, nd);
                 }, options.callbackcontext, node);
             }
@@ -502,6 +504,8 @@ YUI.add('moodle-core_filepicker', function(Y) {
                     filenamediv.createShareIcon(function(e, nd) {
                         // Implement share link functionality here
                         //alert('Share link for folder: ' + node.path);
+                        nd.share_folder = true;
+                        e.preventDefault();
                         Y.bind(options.callback, this)(e, nd);
                     }, options.callbackcontext, node);
                 }
@@ -1098,8 +1102,8 @@ M.core_filepicker.init = function(Y, options) {
                         }
                         this.select_file(node);
                     } else {
-                        if (node.sharable) {
-                            this.show_folder_share_dialog(node, e.node.path);
+                        if (node.share_folder) {
+                            this.select_file(node);
                         } else {
                             // save current path and filelist (in case we want to jump to other viewmode)
                             this.filepath = e.node.origpath;
@@ -1138,7 +1142,7 @@ M.core_filepicker.init = function(Y, options) {
                         e.preventDefault();
                     }
                     if (node.children) {
-                        if (node.sharable) {
+                        if (node.share_folder) {
                             //this.show_folder_share_dialog(node, e.node.path);
                             this.select_file(node);
                         } else if (this.active_repo.dynload) {
