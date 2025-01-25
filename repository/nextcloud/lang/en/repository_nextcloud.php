@@ -48,6 +48,7 @@ $string['both'] = 'Internal and external';
 $string['supportedreturntypes'] = 'Supported files';
 $string['defaultreturntype'] = 'Default return type';
 $string['fileoptions'] = 'The types and defaults for returned files is configurable here. Note that all files linked externally will be updated so that the owner is the Moodle system account.';
+$string['accesscontrolledlinkenabled'] = 'Allow Access controlled link creation';
 
 // Exceptions.
 $string['configuration_exception'] = 'An error in the configuration of the OAuth 2 client occurred: {$a}';
