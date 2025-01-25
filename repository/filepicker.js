@@ -1410,6 +1410,7 @@ M.core_filepicker.init = function(Y, options) {
                         scope.selectui.hide();
                     },
                     callback: function(id, obj, args) {
+                        console.log(obj);
                         selectnode.removeClass('loading');
                         if (obj.event == 'fileexists') {
                             scope.process_existing_file(obj);

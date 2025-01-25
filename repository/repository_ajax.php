@@ -182,7 +182,7 @@ switch ($action) {
             } else {
                 $link = $repo->get_link($reference);
             }
-            $link = $repo->get_link($reference);
+            /*$link = $repo->get_link($reference);*/
             $info = array();
             $info['file'] = $saveas_filename;
             $info['type'] = 'link';
