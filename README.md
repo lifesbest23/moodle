@@ -117,7 +117,13 @@ chown www-data /var/www/moodle
 ... Installation ...
 chown new_user /var/www/moodle
 ```
-13. Mit Nextcloud als Oauth2 Provider verbinden und als repository verbinden [Doku](https://docs.moodle.org/405/de/Nextcloud_Repository)
+13. Add cronjob
+```
+sudo -u www-data crontab -e
+    Add
+* * * * * /usr/bin/php  /var/www/moodle/admin/cli/cron.php >/dev/null
+```
+14. Mit Nextcloud als Oauth2 Provider verbinden und als repository verbinden [Doku](https://docs.moodle.org/405/de/Nextcloud_Repository)
 
 Jetzt sollte alles funktionieren!
 
