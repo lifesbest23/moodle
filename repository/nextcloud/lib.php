@@ -589,7 +589,8 @@ class repository_nextcloud extends repository {
     public function default_returntype() {
         $setting = $this->get_option('defaultreturntype');
         $supported = $this->get_option('supportedreturntypes');
-        if (($setting == FILE_INTERNAL && $supported !== 'external') || $supported === 'internal') {
+        $controlledlink = $this->get_option('accesscontrolledlinkenabled');
+        if ($controlledlink || ($setting == FILE_INTERNAL && $supported !== 'external') || $supported === 'internal') {
             return FILE_INTERNAL;
         }
         return FILE_CONTROLLED_LINK;
@@ -763,6 +764,9 @@ class repository_nextcloud extends repository {
             FILE_CONTROLLED_LINK => get_string('external', 'repository_nextcloud'),
         ];
         $mform->addElement('select', 'defaultreturntype', get_string('defaultreturntype', 'repository_nextcloud'), $choices);
+
+        $mform->addElement('selectyesno', 'accesscontrolledlinkenabled', get_string('accesscontrolledlinkenabled', 'repository_nextcloud'), $choices);
+        $mform->setDefault('accesscontrolledlinkenabled', 1);
     }
 
     /**
@@ -774,6 +778,7 @@ class repository_nextcloud extends repository {
     public function set_option($options = array()) {
         $options['issuerid'] = clean_param($options['issuerid'], PARAM_INT);
         $options['controlledlinkfoldername'] = clean_param($options['controlledlinkfoldername'], PARAM_TEXT);
+        $options['accesscontrolledlinkenabled'] = clean_param($options['accesscontrolledlinkenabled'], PARAM_INT);
 
         $ret = parent::set_option($options);
         return $ret;
@@ -786,14 +791,15 @@ class repository_nextcloud extends repository {
      */
     public static function get_instance_option_names() {
         return ['issuerid', 'controlledlinkfoldername',
-            'defaultreturntype', 'supportedreturntypes'];
+            'defaultreturntype', 'supportedreturntypes',
+            'accesscontrolledlinkenabled'];
     }
 
     /**
      * Method to define which file-types are supported (hardcoded can not be changed in Admin Menu)
      *
      * By default FILE_INTERNAL is supported. In case a system account is connected and an issuer exist,
-     * FILE_CONTROLLED_LINK is supported.
+     * FILE_CONTROLLED_LINK is supported unless it is globally disabled.
      *
      * FILE_INTERNAL - the file is uploaded/downloaded and stored directly within the Moodle file system.
      * FILE_CONTROLLED_LINK - creates a copy of the file in Nextcloud from which private shares to permitted users will be
@@ -804,10 +810,13 @@ class repository_nextcloud extends repository {
     public function supported_returntypes() {
         // We can only support references if the system account is connected.
         if (!empty($this->issuer) && $this->issuer->is_system_account_connected()) {
-            $setting = $this->get_option('supportedreturntypes');
-            if ($setting === 'internal') {
+            $returntypes = $this->get_option('supportedreturntypes');
+            $controlledlink = $this->get_option('accesscontrolledlinkenabled');
+            if ($returntypes === 'internal') {
                 return FILE_INTERNAL;
-            } else if ($setting === 'external') {
+            } else if (!$controlledlink) {
+                return  FILE_INTERNAL | FILE_REFERENCE;
+            } else if ($returntypes === 'external') {
                 return FILE_CONTROLLED_LINK;
             } else {
                 return FILE_CONTROLLED_LINK | FILE_INTERNAL | FILE_REFERENCE;
