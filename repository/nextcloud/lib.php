@@ -928,6 +928,7 @@ class repository_nextcloud extends repository {
             'manage' => $this->issuer->get('baseurl'), // Provide button to go into file management interface quickly.
             'list' => array(), // Contains all file/folder information and is required to build the file/folder tree.
             'filereferencewarning' => get_string('externalpubliclinkwarning', 'repository_nextcloud'),
+            'folderreferencewarning' => get_string('foldercontentpublicwarning', 'repository_nextcloud'),
         ];
 
         // If relative path is a non-top-level path, calculate all its parents' paths.

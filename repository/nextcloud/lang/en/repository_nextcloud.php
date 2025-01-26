@@ -65,4 +65,4 @@ $string['endpointnotdefined'] = 'Endpoint {$a} not defined.';
 
 // Warnings.
 $string['externalpubliclinkwarning'] = 'Warning: This file will become public.';
-$string['foldercontentpublicwarning'] = 'Warning: Creating a share will make the folder contents publicly accessible via a link';
+$string['foldercontentpublicwarning'] = 'Warning: Creating a share will make the folder contents publicly accessible via a link, but only if the link is publicly shared!';
