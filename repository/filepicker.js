@@ -94,13 +94,6 @@ YUI.add('moodle-core_filepicker', function(Y) {
         return this;
     }
 
-    Y.Node.prototype.createShareIcon = function(shareCallback, e, nd) {
-        var shareIcon = Y.Node.create('<span class="fp-share-icon">🔗</span>');
-        shareIcon.on('click', shareCallback, e, nd);
-        this.appendChild(shareIcon);
-        return this;
-    };
-
     /**
      * Replaces the image source with preview. If the image is inside the treeview, we need
      * also to update the html property of corresponding YAHOO.widget.HTMLNode
@@ -194,6 +187,20 @@ YUI.add('moodle-core_filepicker', function(Y) {
             var displayname = node.shorttitle ? node.shorttitle : file_get_filename(node);
             return Y.Escape.html(displayname);
         };
+        var create_share_icon = function(node) {
+            var shareIcon = Y.Node.create('<span class="fp-share-icon">🔗</span>');
+            shareIcon.on('click',
+                function(e, nd) {
+                    // Implement share link functionality here
+                    //alert('Share link for folder: ' + node.path);
+                    nd.share_folder = true;
+                    e.preventDefault();
+                    Y.bind(options.callback, this)(e, nd);
+                    e.stopPropagation();
+                }, options.callbackcontext, node);
+            return shareIcon;
+        };
+
         /** return file description (different attributes in FileManager and FilePicker) */
         var file_get_description = function(node) {
             var description = '';
@@ -215,13 +222,7 @@ YUI.add('moodle-core_filepicker', function(Y) {
             var filenamediv = el.one('.fp-filename');
             filenamediv.setContent(file_get_displayname(node));
             if (file_is_folder(node) && file_is_sharable(node)) {
-                filenamediv.createShareIcon(function(e, nd) {
-                    // Implement share link functionality here
-                    //alert('Share link for folder: ' + node.path);
-                    nd.share_folder = true;
-                    e.preventDefault();
-                    Y.bind(options.callback, this)(e, nd);
-                }, options.callbackcontext, node);
+                filenamediv.appendChild(create_share_icon(node));
             }
 
             // TODO add tooltip with node.title or node.thumbnail_title
@@ -501,13 +502,7 @@ YUI.add('moodle-core_filepicker', function(Y) {
                 filenamediv.setContent(file_get_displayname(node));
                 // Add share icon for folders
                 if (file_is_folder(node) && file_is_sharable(node)) {
-                    filenamediv.createShareIcon(function(e, nd) {
-                        // Implement share link functionality here
-                        //alert('Share link for folder: ' + node.path);
-                        nd.share_folder = true;
-                        e.preventDefault();
-                        Y.bind(options.callback, this)(e, nd);
-                    }, options.callbackcontext, node);
+                    filenamediv.appendChild(create_share_icon(node));
                 }
 
                 var imgdiv = element.one('.fp-thumbnail'), width, height, src;
@@ -866,7 +861,7 @@ M.core_filepicker.init = function(Y, options) {
                 }, false);
                 this.process_dlg.hide();
                 this.selectui.hide();
-                //this.selectdirui.hide();
+                this.selectdirui.hide();
             }
             if (!this.process_dlg) {
                 this.process_dlg_node = Y.Node.create(M.core_filepicker.templates.processexistingfile);
@@ -1103,7 +1098,7 @@ M.core_filepicker.init = function(Y, options) {
                         this.select_file(node);
                     } else {
                         if (node.share_folder) {
-                            this.select_file(node);
+                            this.select_folder(node);
                         } else {
                             // save current path and filelist (in case we want to jump to other viewmode)
                             this.filepath = e.node.origpath;
@@ -1144,7 +1139,7 @@ M.core_filepicker.init = function(Y, options) {
                     if (node.children) {
                         if (node.share_folder) {
                             //this.show_folder_share_dialog(node, e.node.path);
-                            this.select_file(node);
+                            this.select_folder(node);
                         } else if (this.active_repo.dynload) {
                             this.list({ 'path': node.path });
                         } else {
@@ -1236,6 +1231,143 @@ M.core_filepicker.init = function(Y, options) {
             }, false);
         },
 
+        select_folder: function(args) {
+            var argstitle = args.shorttitle ? args.shorttitle : args.title;
+            // Limit the string length so it fits nicely on mobile devices
+            var titlelength = 30;
+            if (argstitle.length > titlelength) {
+                argstitle = argstitle.substring(0, titlelength) + '...';
+            }
+            Y.one('#fp-directory_label_' + this.options.client_id).setContent(Y.Escape.html(M.util.get_string('select', 'repository') + ' ' + argstitle));
+            this.selectdirui.show();
+            Y.one('#' + this.selectdirnode.get('id')).focus();
+            var client_id = this.options.client_id;
+            var selectdirnode = this.selectdirnode;
+            var return_types = this.options.repositories[this.active_repo.id].return_types;
+            selectdirnode.one('.fp-saveas input').set('value', args.title);
+
+            // filelink is the array of file-link-types available for this repository in this env
+            var filelinktypes = [4/*FILE_REFERENCE*/];
+            var filelink = {}, firstfilelink = null, filelinkcount = 0;
+            for (var i in filelinktypes) {
+                var allowed = (return_types & filelinktypes[i]) &&
+                    (this.options.return_types & filelinktypes[i]);
+                filelink[filelinktypes[i]] = allowed;
+                firstfilelink = (firstfilelink == null && allowed) ? filelinktypes[i] : firstfilelink;
+                filelinkcount += allowed ? 1 : 0;
+            }
+            // make radio buttons enabled if this file-link-type is available and only if there are more than one file-link-type option
+            // check the first available file-link-type option
+            for (var linktype in filelink) {
+                var el = selectdirnode.one('.fp-linktype-' + linktype);
+                el.addClassIf('uneditable', !(filelink[linktype] && filelinkcount > 1));
+                el.one('input').set('checked', (firstfilelink == linktype) ? 'checked' : '').simulate('change');
+            }
+
+            // TODO MDL-32532: attributes 'hasauthor' and 'haslicense' need to be obsolete,
+            console.log('folder_select');
+            console.log(args);
+            selectdirnode.one('form #filesource-' + client_id).set('value', args.source);
+            selectdirnode.one('form #filesourcekey-' + client_id).set('value', args.sourcekey);
+        },
+        setup_select_folder: function() {
+            var client_id = this.options.client_id;
+            var selectdirnode = this.selectdirnode;
+            var getfile = selectdirnode.one('.fp-select-confirm');
+            var filePickerHelper = this;
+            // bind labels with corresponding inputs
+            selectdirnode.all('.fp-saveas,.fp-linktype-4').each(function(node) {
+                node.all('label').set('for', node.one('input,select').generateID());
+            });
+            selectdirnode.one('.fp-linktype-4 input').setAttrs({ value: 4, name: 'linktype' });
+            var changelinktype = function(e) {
+                if (e.currentTarget.get('checked')) {
+                    var allowinputs = e.currentTarget.get('value') != 1/*FILE_EXTERNAL*/;
+                    selectdirnode.all('.fp-saveas').each(function(node) {
+                        node.addClassIf('uneditable', !allowinputs);
+                        node.all('input,select').set('disabled', allowinputs ? '' : 'disabled');
+                    });
+
+                    var folderreferencewarning = filePickerHelper.active_repo.folderreferencewarning;
+                    if (folderreferencewarning) {
+                        var folderReferenceNode = e.currentTarget.ancestor('.fp-linktype-4');
+                        if (!folderReferenceNode.one('.alert-warning')) {
+                            var folderReferenceWarningNode = Y.Node.create('<div/>').
+                                addClass('alert alert-warning px-3 py-1 my-1 small').
+                                setAttrs({ role: 'alert' }).
+                                setContent(folderreferencewarning);
+                            folderReferenceNode.append(folderReferenceWarningNode);
+                        }
+                    }
+
+                }
+            };
+
+            selectdirnode.all('.fp-linktype-4').each(function(node) {
+                node.one('input').on('change', changelinktype, this);
+            });
+            // register event on clicking submit button
+            getfile.on('click', function(e) {
+                e.preventDefault();
+                var client_id = this.options.client_id;
+                var scope = this;
+                var repository_id = this.active_repo.id;
+                var title = selectdirnode.one('.fp-saveas input').get('value');
+                var filesource = selectdirnode.one('form #filesource-' + client_id).get('value');
+                var filesourcekey = selectdirnode.one('form #filesourcekey-' + client_id).get('value');
+                var params = {
+                    'title': title,
+                    'source': filesource,
+                    'savepath': this.options.savepath || '/',
+                    'sourcekey': filesourcekey,
+                };
+                params['folderlink'] = true;
+
+                var return_types = this.options.repositories[this.active_repo.id].return_types;
+                if ((return_types & 4/*FILE_REFERENCE*/) &&
+                    (this.options.return_types & 4/*FILE_REFERENCE*/) &&
+                    selectdirnode.one('.fp-linktype-4 input').get('checked')) {
+                    params['usefilereference'] = '1';
+                }
+                console.log(params);
+                this.request({
+                    action: 'download',
+                    client_id: client_id,
+                    repository_id: repository_id,
+                    'params': params,
+                    onerror: function(id, obj, args) {
+                        scope.selectdirui.hide();
+                    },
+                    callback: function(id, obj, args) {
+                        console.log(obj);
+                        if (obj.event == 'fileexists') {
+                            scope.process_existing_file(obj);
+                            return;
+                        }
+                        scope.hide();
+                        obj.client_id = client_id;
+                        var formcallback_scope = args.scope.options.magicscope ? args.scope.options.magicscope : args.scope;
+                        scope.options.formcallback.apply(formcallback_scope, [obj]);
+                    }
+                }, false);
+            }, this);
+            var elform = selectdirnode.one('form');
+            elform.appendChild(Y.Node.create('<input/>').
+                setAttrs({ type: 'hidden', id: 'filesource-' + client_id }));
+            elform.appendChild(Y.Node.create('<input/>').
+                setAttrs({ type: 'hidden', id: 'filesourcekey-' + client_id }));
+            elform.on('keydown', function(e) {
+                if (e.keyCode == 13) {
+                    getfile.simulate('click');
+                    e.preventDefault();
+                }
+            }, this);
+            var cancel = selectdirnode.one('.fp-select-cancel');
+            cancel.on('click', function(e) {
+                e.preventDefault();
+                this.selectdirui.hide();
+            }, this);
+        },
         select_file: function(args) {
             var argstitle = args.shorttitle ? args.shorttitle : args.title;
             // Limit the string length so it fits nicely on mobile devices
@@ -1559,6 +1691,25 @@ M.core_filepicker.init = function(Y, options) {
             });
             Y.one('#' + this.selectnode.get('id')).setAttribute('aria-labelledby', fplabel);
 
+            // create panel for selecting a directory (initially hidden)
+            this.selectdirnode = Y.Node.create(M.core_filepicker.templates.selectdirlayout).
+                set('id', 'filepicker-selectdir-' + client_id).
+                set('aria-live', 'assertive').
+                set('role', 'dialog');
+
+            var fpdirlabel = 'fp-directory_label_' + client_id;
+            this.selectdirui = new M.core.dialogue({
+                headerContent: '<h3 id="' + fpdirlabel + '">' + M.util.get_string('select', 'repository') + '</h3>',
+                draggable: true,
+                width: '450px',
+                bodyContent: this.selectdirnode,
+                centered: true,
+                modal: true,
+                visible: false,
+                zIndex: this.options.zIndex
+            });
+            Y.one('#' + this.selectdirnode.get('id')).setAttribute('aria-labelledby', fpdirlabel);
+
             // event handler for lazy loading of thumbnails and next page
             this.fpnode.one('.fp-content').on(['scroll', 'resize'], this.content_scrolled, this);
             // save template for one path element and location of path bar
@@ -1575,7 +1726,7 @@ M.core_filepicker.init = function(Y, options) {
             // assign callbacks for toolbar links
             this.setup_toolbar();
             this.setup_select_file();
-            //this.setup_select_folder();
+            this.setup_select_folder();
             this.hide_header();
 
             // processing repository listing
@@ -1691,6 +1842,7 @@ M.core_filepicker.init = function(Y, options) {
             this.active_repo.manage = data.manage ? data.manage : null;
             // Warning message related to the file reference option, if applicable to the given repository.
             this.active_repo.filereferencewarning = data.filereferencewarning ? data.filereferencewarning : null;
+            this.active_repo.folderreferencewarning = data.folderreferencewarning ? data.folderreferencewarning : null;
             this.print_header();
         },
         print_login: function(data) {
@@ -2172,7 +2324,7 @@ M.core_filepicker.init = function(Y, options) {
         },
         hide: function() {
             this.selectui.hide();
-            //this.selectdirui.hide();
+            this.selectdirui.hide();
             if (this.process_dlg) {
                 this.process_dlg.hide();
             }

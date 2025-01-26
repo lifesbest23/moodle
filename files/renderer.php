@@ -401,6 +401,18 @@ class core_files_renderer extends plugin_renderer_base {
     }
 
     /**
+     * FilePicker JS template for window appearing to select a folder.
+     *
+     * @return string
+     */
+    protected function fp_js_template_selectdirlayout() {
+        $context = [
+            'licensehelpicon' => $this->create_license_help_icon_context()
+        ];
+        return $this->render_from_template('core/filemanager_selectdirlayout', $context);
+    }
+
+    /**
      * FilePicker JS template for window appearing to select a file.
      *
      * @return string
