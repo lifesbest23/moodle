@@ -48,6 +48,7 @@ $string['both'] = 'Internal and external';
 $string['supportedreturntypes'] = 'Supported files';
 $string['defaultreturntype'] = 'Default return type';
 $string['fileoptions'] = 'The types and defaults for returned files is configurable here. Note that all files linked externally will be updated so that the owner is the Moodle system account.';
+$string['accesscontrolledlinkenabled'] = 'Allow Access controlled link creation';
 
 // Exceptions.
 $string['configuration_exception'] = 'An error in the configuration of the OAuth 2 client occurred: {$a}';
@@ -65,3 +66,4 @@ $string['endpointnotdefined'] = 'Endpoint {$a} not defined.';
 
 // Warnings.
 $string['externalpubliclinkwarning'] = 'Warning: This file will become public.';
+$string['foldercontentpublicwarning'] = 'Warning: Creating a share will make the folder contents publicly accessible via a link, but only if the link is publicly shared!';

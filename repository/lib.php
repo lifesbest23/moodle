@@ -1668,6 +1668,25 @@ abstract class repository implements cacheable_object {
     }
 
     /**
+     * CHeck if the given path is a folder.uurl/
+     *
+     * @param string $path
+     * @return bool
+     */
+    public function is_folder($path) {
+        return false;
+    }
+
+    /**
+     * Get the link to the folder.
+     *
+     * @param string $path
+     * @return string
+     */
+    public function get_folder_link($path) {
+        return $url;
+    }
+    /**
      * Return file URL, for most plugins, the parameter is the original
      * url, but some plugins use a file id, so we need this function to
      * convert file id to original url.

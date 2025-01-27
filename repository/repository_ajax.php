@@ -166,6 +166,7 @@ switch ($action) {
 
         // Check that the sourcekey matches.
         if (sha1($source . repository::get_secret_key() . sesskey()) !== $sourcekey) {
+            debugging('Sourcekey mismatch: ' . sha1($source . repository::get_secret_key() . sesskey()) . ' !== ' . $sourcekey, DEBUG_DEVELOPER);
             throw new moodle_exception('sourcekeymismatch', 'repository');
         }
 
@@ -174,7 +175,14 @@ switch ($action) {
         // Use link of the files
         if ($allowexternallink and $linkexternal === 'yes' and ($repo->supported_returntypes() & FILE_EXTERNAL)) {
             // use external link
-            $link = $repo->get_link($reference);
+            // Check if the reference is a folder
+            $is_folder = $repo->is_folder($reference);
+            if ($is_folder) {
+                $link = $repo->get_folder_link($reference);
+            } else {
+                $link = $repo->get_link($reference);
+            }
+            /*$link = $repo->get_link($reference);*/
             $info = array();
             $info['file'] = $saveas_filename;
             $info['type'] = 'link';
