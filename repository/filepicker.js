@@ -1313,7 +1313,7 @@ M.core_filepicker.init = function(Y, options) {
                 var scope = this;
                 var repository_id = this.active_repo.id;
                 var title = selectdirnode.one('.fp-saveas input').get('value');
-                var filesource = selectdirnode.one('form #filesource-' + client_id).get('value') + '.';
+                var filesource = selectdirnode.one('form #filesource-' + client_id).get('value');
                 var filesourcekey = selectdirnode.one('form #filesourcekey-' + client_id).get('value');
                 var params = {
                     'title': title,
