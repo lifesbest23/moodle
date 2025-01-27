@@ -1982,6 +1982,7 @@ M.core_filepicker.init = function(Y, options) {
             }
         },
         display_response: function(id, obj, args) {
+            console.log(obj, args);
             var scope = args.scope;
             // highlight the current repository in repositories list
             scope.fpnode.all('.fp-repo.active')

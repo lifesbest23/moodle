@@ -792,6 +792,115 @@ class webdav_client {
             }
 
     }
+    /**
+     * Search for files using WebDAV SEARCH method.
+     * Implements the WebDAV SEARCH extension (RFC 5323).
+     * 
+     * @param string $path Base path to start searching from
+     * @param string $query Search query
+     * @param array $properties Optional array of DAV properties to return
+     * @return array|bool Array of matching files/folders or false on error
+     */
+    function search($path, $query, $properties = array()) {
+        if (trim($path) == '') {
+            $this->_error_log('Missing a path in method search');
+            return false;
+        }
+        $this->_path = $this->translate_uri($path);
+
+        $this->header_unset();
+        $this->create_basic_request('SEARCH');
+        $this->header_add('Depth: 1');
+        $this->header_add('Content-type: text/xml');
+
+        // Default properties if none specified
+        if (empty($properties)) {
+            $properties = array(
+                'DAV:displayname',
+                'DAV:getcontentlength',
+                'DAV:getlastmodified',
+                'DAV:resourcetype'
+            );
+        }
+        // Build the SEARCH request XML
+        $xml = '<?xml version="1.0" encoding="utf-8" ?>' . "\r\n";
+        $xml .= '<D:searchrequest xmlns:D="DAV:">' . "\r\n";
+        $xml .= '  <D:basicsearch>' . "\r\n";
+        $xml .= '    <D:select>' . "\r\n";
+        $xml .= '      <D:prop>' . "\r\n";
+        foreach ($properties as $prop) {
+            $xml .= '        <D:' . basename($prop) . '/>' . "\r\n";
+        }
+        $xml .= '      </D:prop>' . "\r\n";
+        $xml .= '    </D:select>' . "\r\n";
+        $xml .= '    <D:from>' . "\r\n";
+        $xml .= '      <D:scope>' . "\r\n";
+        $xml .= '        <D:href>' . $this->_path . '</D:href>' . "\r\n";
+        $xml .= '        <D:depth>infinity</D:depth>' . "\r\n";
+        $xml .= '      </D:scope>' . "\r\n";
+        $xml .= '    </D:from>' . "\r\n";
+        $xml .= '    <D:where>' . "\r\n";
+        $xml .= '      <D:like>' . "\r\n";
+        $xml .= '        <D:prop><D:displayname/></D:prop>' . "\r\n";
+        $xml .= '        <D:literal>' . htmlspecialchars($query) . '</D:literal>' . "\r\n";
+        $xml .= '      </D:like>' . "\r\n";
+        $xml .= '    </D:where>' . "\r\n";
+        $xml .= '  </D:basicsearch>' . "\r\n";
+        $xml .= '</D:searchrequest>' . "\r\n";
+
+        $this->header_add('Content-length: ' . strlen($xml));
+        $this->send_request();
+        $this->_error_log($xml);
+        fputs($this->sock, $xml);
+        $this->get_respond();
+        $response = $this->process_respond();
+        // We expect a 207 Multi-Status status code
+        // print 'http ok<br>';
+        if (strcmp($response['status']['status-code'],'207') == 0 ) {
+            // ok so far
+            // next there should be a Content-Type: text/xml; charset="utf-8" header line
+            if (preg_match('#(application|text)/xml;\s?charset=[\'\"]?utf-8[\'\"]?#i', $response['header']['Content-Type'])) {
+                // ok let's get the content of the xml stuff
+                $this->_parser = xml_parser_create_ns('UTF-8');
+                $this->_parserid = $this->get_parser_id($this->_parser);
+                // forget old data...
+                unset($this->_search_result[$this->_parserid]);
+                unset($this->_xmltree[$this->_parserid]);
+                xml_parser_set_option($this->_parser,XML_OPTION_SKIP_WHITE,0);
+                xml_parser_set_option($this->_parser,XML_OPTION_CASE_FOLDING,0);
+                // xml_parser_set_option($this->_parser,XML_OPTION_TARGET_ENCODING,'UTF-8');
+                xml_set_object($this->_parser, $this);
+
+                xml_set_element_handler($this->_parser, 
+                    array($this, '_search_startElement'),                        array($this, '_endElement'));
+                xml_set_character_data_handler($this->_parser, 
+                    array($this, '_search_cdata'));
+
+                if (!xml_parse($this->_parser, $response['body'])) {
+                    die(sprintf("XML error: %s at line %d",
+                        xml_error_string(xml_get_error_code($this->_parser)),
+                        xml_get_current_line_number($this->_parser)));
+                }
+
+                // Free resources
+                xml_parser_free($this->_parser);
+                $arr = $this->_search_result[$this->_parserid];
+                return $arr;
+            } else {
+                $this->_error_log('Missing Content-Type: text/xml header in response!!');
+                return false;
+            }
+        } else {
+            // return status code ...
+            return $response['status']['status-code'];
+        }
+
+        // response was not http
+        $this->_error_log('Ups in method search: error in response from server');
+
+        return false;
+    }
+
 
     /**
      * Public method ls
@@ -1087,6 +1196,51 @@ EOD;
         // end tag was found...
         $parserid = $this->get_parser_id($parser);
         $this->_xmltree[$parserid] = substr($this->_xmltree[$parserid],0, strlen($this->_xmltree[$parserid]) - (strlen($name) + 1));
+    }
+    /**
+     * Search results array
+     * @var array
+     */
+    private $_search_result = array();
+
+    /**
+     * XML parser callback for search results
+     */
+    private function _search_startElement($parser, $name, $attrs) {
+        $parserid = $this->get_parser_id($parser);
+        $this->_xmltree[$parserid] .= strtolower($name) . '_';
+
+        switch($this->_xmltree[$parserid]) {
+            case 'dav::multistatus_dav::response_':
+                $this->_search_result[$parserid][] = array();
+                end($this->_search_result[$parserid]);
+                $this->_search_ref =& $this->_search_result[$parserid][key($this->_search_result[$parserid])];
+                break;
+            case 'dav::multistatus_dav::response_dav::href_':
+                $this->_search_ref_cdata =& $this->_search_ref['href'];
+                break;
+            case 'dav::multistatus_dav::response_dav::propstat_dav::prop_dav::getcontentlength_':
+                $this->_search_ref_cdata =& $this->_search_ref['getcontentlength'];
+                break;
+            case 'dav::multistatus_dav::response_dav::propstat_dav::prop_dav::getlastmodified_':
+                $this->_search_ref_cdata =& $this->_search_ref['lastmodified'];
+                break;
+            case 'dav::multistatus_dav::response_dav::propstat_dav::prop_dav::displayname_':
+                $this->_search_ref_cdata =& $this->_search_ref['displayname'];
+                break;
+            case 'dav::multistatus_dav::response_dav::propstat_dav::prop_dav::resourcetype_dav::collection_':
+                $this->_search_ref['resourcetype'] = 'collection';
+                break;
+        }
+    }
+
+    /**
+     * XML parser callback for search results
+     */
+    private function _search_cdata($parser, $data) {
+        if (isset($this->_search_ref_cdata)) {
+            $this->_search_ref_cdata .= $data;
+        }
     }
 
     /**

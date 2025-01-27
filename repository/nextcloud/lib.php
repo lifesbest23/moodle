@@ -659,6 +659,92 @@ class repository_nextcloud extends repository {
                     array('target' => '_blank',  'rel' => 'noopener noreferrer'));
         }
     }
+    /**
+     * Search for files in the Nextcloud repository
+     *
+     * @param string $searchtext The text to search for
+     * @param int $page Page number of results to fetch (Not used)
+     * @return array An array with format matching repository::get_listing()
+     */
+    public function search($searchtext, $page = 0) {
+        if (empty($searchtext)) {
+            return array();
+        }
+
+        $ret = array(
+            'dynload' => true,
+            'nosearch' => false,
+            'nologin' => false,
+            'list' => array(),
+            'path' => array(
+                array('name' => $this->get_meta()->name, 'path' => '')
+            )
+        );
+
+        try {
+            $this->initiate_webdavclient();
+            if (!$this->dav->open()) {
+                return $ret;
+            }
+
+            // Use native WebDAV SEARCH
+            $results = $this->dav->search('/', $searchtext);
+            
+            if (is_array($results)) {
+                // Convert WebDAV results to Moodle repository format
+                $ret['list'] = $this->get_listing_convert_response('/', $results);
+            }
+
+            $this->dav->close();
+            return $ret;
+
+        } catch (Exception $e) {
+            if (isset($this->dav)) {
+                $this->dav->close();
+            }
+            debugging('Error in Nextcloud repository search: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            return $ret;
+        }
+    }
+    /**
+     * Search files in repository
+     * When doing global search, $search_text will be used as
+     * keyword.
+     *
+     * @param string $search_text search key word
+     * @param int $page page
+     * @return mixed see {@link repository::get_listing()}
+     */
+    /*public function search($search_text, $page = 0) {*/
+    /*    if (empty($path)) {*/
+    /*        $path = '/';*/
+    /*    }*/
+    /**/
+    /*    $ret = $this->get_listing_prepare_response($path);*/
+    /**/
+    /*    // Before any WebDAV method can be executed, a WebDAV client socket needs to be opened*/
+    /*    // which connects to the server.*/
+    /*    $this->initiate_webdavclient();*/
+    /*    if (!$this->dav->open()) {*/
+    /*        return $ret;*/
+    /*    }*/
+    /**/
+    /*    // Since the paths which are received from the PROPFIND WebDAV method are url encoded*/
+    /*    // (because they depict actual web-paths), the received paths need to be decoded back*/
+    /*    // for the plugin to be able to work with them.*/
+    /*    $ls = $this->dav->ls($this->davbasepath . urldecode($path));*/
+    /*    $this->dav->close();*/
+    /**/
+    /*    // The method get_listing return all information about all child files/folders of the*/
+    /*    // current directory. If no information was received, the directory must be empty.*/
+    /*    if (!is_array($ls)) {*/
+    /*        return $ret;*/
+    /*    }*/
+    /**/
+    /*    // Process WebDAV output and convert it into Moodle format.*/
+    /*    $ret['list'] = $this->get_listing_convert_response($path, $ls);*/
+    /*    return $ret;*/
+    /*}*/
 
     /**
      * Deletes the held Access Token and prints the Login window.
@@ -927,7 +1013,7 @@ class repository_nextcloud extends repository {
         $ret = [
             // Fetch the list dynamically. An AJAX request is sent to the server as soon as the user opens a folder.
             'dynload' => true,
-            'nosearch' => true, // Disable search.
+            /*'nosearch' => true, // Disable search.*/
             'nologin' => false, // Provide a login link because a user logs into his/her private Nextcloud storage.
             'path' => array([ // Contains all parent paths to the current path.
                 'name' => $this->get_meta()->name,
