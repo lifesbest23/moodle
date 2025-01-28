@@ -37,7 +37,8 @@ require_once($CFG->libdir . '/webdavlib.php');
  * @copyright  2017 Project seminar (Learnweb, University of Münster)
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class repository_nextcloud extends repository {
+class repository_nextcloud extends repository
+{
     /**
      * OAuth 2 client
      * @var \core\oauth2\client
@@ -105,7 +106,8 @@ class repository_nextcloud extends repository {
      * @param bool|int|stdClass $context
      * @param array $options
      */
-    public function __construct($repositoryid, $context = SYSCONTEXTID, $options = array()) {
+    public function __construct($repositoryid, $context = SYSCONTEXTID, $options = array())
+    {
         parent::__construct($repositoryid, $context, $options);
         try {
             // Issuer from repository instance config.
@@ -157,7 +159,8 @@ class repository_nextcloud extends repository {
      *
      * @return false|oauth2_client False if initialisation was unsuccessful, otherwise an initialised client.
      */
-    private function get_system_oauth_client() {
+    private function get_system_oauth_client()
+    {
         if ($this->systemoauthclient === false) {
             try {
                 $this->systemoauthclient = \core\oauth2\api::get_system_oauth_client($this->issuer);
@@ -173,7 +176,8 @@ class repository_nextcloud extends repository {
      *
      * @return null|ocs_client Null if initialisation was unsuccessful, otherwise an initialised client.
      */
-    private function get_system_ocs_client() {
+    private function get_system_ocs_client()
+    {
         if ($this->systemocsclient === null) {
             try {
                 $systemoauth = $this->get_system_oauth_client();
@@ -193,7 +197,8 @@ class repository_nextcloud extends repository {
      *
      * @throws \repository_nextcloud\configuration_exception If configuration is missing (endpoints).
      */
-    private function initiate_webdavclient() {
+    private function initiate_webdavclient()
+    {
         if ($this->dav !== null) {
             return $this->dav;
         }
@@ -214,11 +219,17 @@ class repository_nextcloud extends repository {
         if (isset($webdavendpoint['port'])) {
             $webdavport = $webdavendpoint['port'];
         }
-
+        $userinfo = $this->client->get_userinfo();
+        $username = $userinfo['username'];
         // Authentication method is `bearer` for OAuth 2. Pass token of authenticated client, too.
-        $this->dav = new \webdav_client($server, '', '', 'bearer', $webdavtype,
-            $this->get_user_oauth_client()->get_accesstoken()->token);
-
+        $this->dav = new \webdav_client(
+            $server,
+            $username,
+            '',
+            'bearer',
+            $webdavtype,
+            $this->get_user_oauth_client()->get_accesstoken()->token
+        );
         $this->dav->port = $webdavport;
         $this->dav->debug = false;
         return $this->dav;
@@ -232,7 +243,8 @@ class repository_nextcloud extends repository {
      * @param string $title title of the file.
      * @return array|bool returns either the moodle path to the file or false.
      */
-    public function get_file($reference, $title = '') {
+    public function get_file($reference, $title = '')
+    {
         // Normal file.
         $reference = urldecode($reference);
 
@@ -256,7 +268,8 @@ class repository_nextcloud extends repository {
      * @param string $page page number (given multiple pages of elements).
      * @return array directory properties.
      */
-    public function get_listing($path='', $page = '') {
+    public function get_listing($path = '', $page = '')
+    {
         if (empty($path)) {
             $path = '/';
         }
@@ -285,7 +298,6 @@ class repository_nextcloud extends repository {
         // Process WebDAV output and convert it into Moodle format.
         $ret['list'] = $this->get_listing_convert_response($path, $ls);
         return $ret;
-
     }
 
     /**
@@ -294,7 +306,8 @@ class repository_nextcloud extends repository {
      * @param string $path
      * @return bool
      */
-    public function is_folder($path) {
+    public function is_folder($path)
+    {
         // Implement logic to check if the path is a folder
         // For example, you might use the Nextcloud API to check the type of the path
         $params = ['path' => $path];
@@ -311,7 +324,8 @@ class repository_nextcloud extends repository {
      * @param string $path
      * @return string
      */
-    public function get_folder_link($path) {
+    public function get_folder_link($path)
+    {
         // Implement logic to get the public link for the folder using the Nextcloud API
         $params = [
             'path' => $path,
@@ -335,26 +349,32 @@ class repository_nextcloud extends repository {
      * @throws \repository_nextcloud\request_exception If nextcloud responded badly
      *
      */
-    public function get_link($url) {
+    public function get_link($url)
+    {
         // Create a read only public link, remember no update possible in this file/folder.
         $ocsparams = [
             'path' => $url,
             'shareType' => ocs_client::SHARE_TYPE_PUBLIC,
             'publicUpload' => false,
             'permissions' => ocs_client::SHARE_PERMISSION_READ
-            ];
+        ];
 
         $response = $this->ocsclient->call('create_share', $ocsparams);
         $xml = simplexml_load_string($response);
 
-        if ($xml === false ) {
-            throw new \repository_nextcloud\request_exception(array('instance' => $this->get_name(),
-                'errormessage' => get_string('invalidresponse', 'repository_nextcloud')));
+        if ($xml === false) {
+            throw new \repository_nextcloud\request_exception(array(
+                'instance' => $this->get_name(),
+                'errormessage' => get_string('invalidresponse', 'repository_nextcloud')
+            ));
         }
 
         if ((string)$xml->meta->status !== 'ok') {
             throw new \repository_nextcloud\request_exception(array('instance' => $this->get_name(), 'errormessage' => sprintf(
-                '(%s) %s', $xml->meta->statuscode, $xml->meta->message)));
+                '(%s) %s',
+                $xml->meta->statuscode,
+                $xml->meta->message
+            )));
         }
 
         // Take the share link and convert it into a download link.
@@ -367,7 +387,8 @@ class repository_nextcloud extends repository {
      * @param string $source source of the file, returned by repository as 'source' and received back from user (not cleaned)
      * @return string file reference, ready to be stored or json encoded string for public link reference
      */
-    public function get_file_reference($source) {
+    public function get_file_reference($source)
+    {
         $usefilereference = optional_param('usefilereference', false, PARAM_BOOL);
         if ($usefilereference) {
             return json_encode([
@@ -399,7 +420,8 @@ class repository_nextcloud extends repository {
      * @throws moodle_exception
      * @throws repository_exception
      */
-    public function reference_file_selected($reference, $context, $component, $filearea, $itemid) {
+    public function reference_file_selected($reference, $context, $component, $filearea, $itemid)
+    {
         $source = json_decode($reference);
 
         if (is_object($source)) {
@@ -418,8 +440,13 @@ class repository_nextcloud extends repository {
             throw new repository_exception('cannotdownload', 'repository');
         }
 
-        $linkmanager = new \repository_nextcloud\access_controlled_link_manager($this->ocsclient, $this->get_system_oauth_client(),
-            $this->get_system_ocs_client(), $this->issuer, $this->get_name());
+        $linkmanager = new \repository_nextcloud\access_controlled_link_manager(
+            $this->ocsclient,
+            $this->get_system_oauth_client(),
+            $this->get_system_ocs_client(),
+            $this->issuer,
+            $this->get_name()
+        );
 
         // Get the current user.
         $userauth = $this->get_user_oauth_client();
@@ -435,8 +462,12 @@ class repository_nextcloud extends repository {
         }
 
         // 2. Create a unique path in the system account.
-        $createdfolder = $linkmanager->create_folder_path_access_controlled_links($context, $component, $filearea,
-            $itemid);
+        $createdfolder = $linkmanager->create_folder_path_access_controlled_links(
+            $context,
+            $component,
+            $filearea,
+            $itemid
+        );
 
         // 3. Copy File to the new folder path.
         $linkmanager->transfer_file_to_path($responsecreateshare['filetarget'], $createdfolder, 'copy');
@@ -469,7 +500,8 @@ class repository_nextcloud extends repository {
      * @throws coding_exception
      * @throws moodle_exception
      */
-    public function send_file($storedfile, $lifetime=null , $filter=0, $forcedownload=false, ?array $options = null) {
+    public function send_file($storedfile, $lifetime = null, $filter = 0, $forcedownload = false, ?array $options = null)
+    {
         $repositoryname = $this->get_name();
         $reference = json_decode($storedfile->get_reference());
 
@@ -481,16 +513,24 @@ class repository_nextcloud extends repository {
 
         // 1. assure the client and user is logged in.
         if (empty($this->client) || $this->get_system_oauth_client() === false || $this->get_system_ocs_client() === null) {
-            $details = get_string('contactadminwith', 'repository_nextcloud',
-                get_string('noclientconnection', 'repository_nextcloud'));
+            $details = get_string(
+                'contactadminwith',
+                'repository_nextcloud',
+                get_string('noclientconnection', 'repository_nextcloud')
+            );
             throw new \repository_nextcloud\request_exception(array('instance' => $repositoryname, 'errormessage' => $details));
         }
 
         // Download for offline usage. This is strictly read-only, so the file need not be shared.
         if (!empty($options['offline'])) {
             // Download from system account and provide the file to the user.
-            $linkmanager = new \repository_nextcloud\access_controlled_link_manager($this->ocsclient,
-                $this->get_system_oauth_client(), $this->get_system_ocs_client(), $this->issuer, $repositoryname);
+            $linkmanager = new \repository_nextcloud\access_controlled_link_manager(
+                $this->ocsclient,
+                $this->get_system_oauth_client(),
+                $this->get_system_ocs_client(),
+                $this->issuer,
+                $repositoryname
+            );
 
             // Create temp path, then download into it.
             $filename = basename($reference->link);
@@ -513,19 +553,26 @@ class repository_nextcloud extends repository {
         // Variable $info is null|\file_info. file_info::is_writable is only true if user may write for any reason.
         $fb = get_file_browser();
         $context = context::instance_by_id($storedfile->get_contextid(), MUST_EXIST);
-        $info = $fb->get_file_info($context,
+        $info = $fb->get_file_info(
+            $context,
             $storedfile->get_component(),
             $storedfile->get_filearea(),
             $storedfile->get_itemid(),
             $storedfile->get_filepath(),
-            $storedfile->get_filename());
+            $storedfile->get_filename()
+        );
         $maywrite = !empty($info) && $info->is_writable();
 
         $this->initiate_webdavclient();
 
         // Create the a manager to handle steps.
-        $linkmanager = new \repository_nextcloud\access_controlled_link_manager($this->ocsclient, $this->get_system_oauth_client(),
-            $this->get_system_ocs_client(), $this->issuer, $repositoryname);
+        $linkmanager = new \repository_nextcloud\access_controlled_link_manager(
+            $this->ocsclient,
+            $this->get_system_oauth_client(),
+            $this->get_system_ocs_client(),
+            $this->issuer,
+            $repositoryname
+        );
 
         // 2. Check whether user has folder for files otherwise create it.
         $linkmanager->create_storage_folder($this->controlledlinkfoldername, $this->dav);
@@ -542,16 +589,24 @@ class repository_nextcloud extends repository {
             $shareid = $linkmanager->get_shares_from_path($reference->link, $username);
         } else if ($statuscode == 100) {
             $filetarget = $linkmanager->get_share_information_from_shareid($responsecreateshare['shareid'], $username);
-            $copyresult = $linkmanager->transfer_file_to_path($filetarget, $this->controlledlinkfoldername,
-                'move', $this->dav);
+            $copyresult = $linkmanager->transfer_file_to_path(
+                $filetarget,
+                $this->controlledlinkfoldername,
+                'move',
+                $this->dav
+            );
             if (!($copyresult == 201 || $copyresult == 412)) {
-                throw new \repository_nextcloud\request_exception(array('instance' => $repositoryname,
-                    'errormessage' => get_string('couldnotmove', 'repository_nextcloud', $this->controlledlinkfoldername)));
+                throw new \repository_nextcloud\request_exception(array(
+                    'instance' => $repositoryname,
+                    'errormessage' => get_string('couldnotmove', 'repository_nextcloud', $this->controlledlinkfoldername)
+                ));
             }
             $shareid = $responsecreateshare['shareid'];
         } else if ($statuscode == 997) {
-            throw new \repository_nextcloud\request_exception(array('instance' => $repositoryname,
-                'errormessage' => get_string('notauthorized', 'repository_nextcloud')));
+            throw new \repository_nextcloud\request_exception(array(
+                'instance' => $repositoryname,
+                'errormessage' => get_string('notauthorized', 'repository_nextcloud')
+            ));
         } else {
             $details = get_string('filenotaccessed', 'repository_nextcloud');
             throw new \repository_nextcloud\request_exception(array('instance' => $repositoryname, 'errormessage' => $details));
@@ -586,7 +641,8 @@ class repository_nextcloud extends repository {
      *
      * @return int
      */
-    public function default_returntype() {
+    public function default_returntype()
+    {
         $setting = $this->get_option('defaultreturntype');
         $supported = $this->get_option('supportedreturntypes');
         $controlledlink = $this->get_option('accesscontrolledlinkenabled');
@@ -602,7 +658,8 @@ class repository_nextcloud extends repository {
      *
      * @return array
      */
-    public static function get_type_option_names() {
+    public static function get_type_option_names()
+    {
         return array();
     }
 
@@ -611,7 +668,8 @@ class repository_nextcloud extends repository {
      *
      * @return bool false, if no Access Token is set or can be requested.
      */
-    public function check_login() {
+    public function check_login()
+    {
         $client = $this->get_user_oauth_client();
         return $client->is_logged_in();
     }
@@ -622,7 +680,8 @@ class repository_nextcloud extends repository {
      * @param bool|moodle_url $overrideurl Use this url instead of the repo callback.
      * @return \core\oauth2\client
      */
-    protected function get_user_oauth_client($overrideurl = false) {
+    protected function get_user_oauth_client($overrideurl = false)
+    {
         if ($this->client) {
             return $this->client;
         }
@@ -644,7 +703,8 @@ class repository_nextcloud extends repository {
      * @return mixed login window properties.
      * @throws coding_exception
      */
-    public function print_login() {
+    public function print_login()
+    {
         $client = $this->get_user_oauth_client();
         $loginurl = $client->get_login_url();
         if ($this->options['ajax']) {
@@ -655,8 +715,11 @@ class repository_nextcloud extends repository {
             $ret['login'] = array($btn);
             return $ret;
         } else {
-            echo html_writer::link($loginurl, get_string('login', 'repository'),
-                    array('target' => '_blank',  'rel' => 'noopener noreferrer'));
+            echo html_writer::link(
+                $loginurl,
+                get_string('login', 'repository'),
+                array('target' => '_blank',  'rel' => 'noopener noreferrer')
+            );
         }
     }
     /**
@@ -666,7 +729,8 @@ class repository_nextcloud extends repository {
      * @param int $page Page number of results to fetch (Not used)
      * @return array An array with format matching repository::get_listing()
      */
-    public function search($searchtext, $page = 0) {
+    public function search($searchtext, $page = 0)
+    {
         if (empty($searchtext)) {
             return array();
         }
@@ -687,9 +751,12 @@ class repository_nextcloud extends repository {
                 return $ret;
             }
 
+            $userinfo = $this->client->get_userinfo();
+            $username = $userinfo['username'];
+
             // Use native WebDAV SEARCH
-            $results = $this->dav->search('/', $searchtext);
-            
+            $results = $this->dav->search('/files/' . $username . '/', $searchtext);
+
             if (is_array($results)) {
                 // Convert WebDAV results to Moodle repository format
                 $ret['list'] = $this->get_listing_convert_response('/', $results);
@@ -697,7 +764,6 @@ class repository_nextcloud extends repository {
 
             $this->dav->close();
             return $ret;
-
         } catch (Exception $e) {
             if (isset($this->dav)) {
                 $this->dav->close();
@@ -751,7 +817,8 @@ class repository_nextcloud extends repository {
      *
      * @return array login window properties.
      */
-    public function logout() {
+    public function logout()
+    {
         $client = $this->get_user_oauth_client();
         $client->log_out();
         return parent::logout();
@@ -760,7 +827,8 @@ class repository_nextcloud extends repository {
     /**
      * Sets up access token after the redirection from Nextcloud.
      */
-    public function callback() {
+    public function callback()
+    {
         $client = $this->get_user_oauth_client();
         // If an Access Token is stored within the client, it has to be deleted to prevent the addition
         // of an Bearer authorization header in the request method.
@@ -782,7 +850,8 @@ class repository_nextcloud extends repository {
      * @throws dml_exception
      * @throws required_capability_exception
      */
-    public static function create($type, $userid, $context, $params, $readonly=0) {
+    public static function create($type, $userid, $context, $params, $readonly = 0)
+    {
         require_capability('moodle/site:config', context_system::instance());
         return parent::create($type, $userid, $context, $params, $readonly);
     }
@@ -795,10 +864,13 @@ class repository_nextcloud extends repository {
      * @throws coding_exception
      * @throws dml_exception
      */
-    public static function instance_config_form($mform) {
+    public static function instance_config_form($mform)
+    {
         if (!has_capability('moodle/site:config', context_system::instance())) {
-            $mform->addElement('static', null, '',  get_string('nopermissions', 'error', get_string('configplugin',
-                'repository_nextcloud')));
+            $mform->addElement('static', null, '',  get_string('nopermissions', 'error', get_string(
+                'configplugin',
+                'repository_nextcloud'
+            )));
             return false;
         }
 
@@ -828,8 +900,11 @@ class repository_nextcloud extends repository {
         if (count($validissuers) === 0) {
             $mform->addElement('static', null, '', get_string('no_right_issuers', 'repository_nextcloud'));
         } else {
-            $mform->addElement('static', null, '', get_string('right_issuers', 'repository_nextcloud',
-                implode(', ', $validissuers)));
+            $mform->addElement('static', null, '', get_string(
+                'right_issuers',
+                'repository_nextcloud',
+                implode(', ', $validissuers)
+            ));
         }
 
         $mform->addElement('text', 'controlledlinkfoldername', get_string('foldername', 'repository_nextcloud'));
@@ -861,7 +936,8 @@ class repository_nextcloud extends repository {
      * @param array $options settings
      * @return bool
      */
-    public function set_option($options = array()) {
+    public function set_option($options = array())
+    {
         $options['issuerid'] = clean_param($options['issuerid'], PARAM_INT);
         $options['controlledlinkfoldername'] = clean_param($options['controlledlinkfoldername'], PARAM_TEXT);
         $options['accesscontrolledlinkenabled'] = clean_param($options['accesscontrolledlinkenabled'], PARAM_INT);
@@ -875,10 +951,15 @@ class repository_nextcloud extends repository {
      *
      * @return array
      */
-    public static function get_instance_option_names() {
-        return ['issuerid', 'controlledlinkfoldername',
-            'defaultreturntype', 'supportedreturntypes',
-            'accesscontrolledlinkenabled'];
+    public static function get_instance_option_names()
+    {
+        return [
+            'issuerid',
+            'controlledlinkfoldername',
+            'defaultreturntype',
+            'supportedreturntypes',
+            'accesscontrolledlinkenabled'
+        ];
     }
 
     /**
@@ -893,7 +974,8 @@ class repository_nextcloud extends repository {
      *
      * @return int return type bitmask supported
      */
-    public function supported_returntypes() {
+    public function supported_returntypes()
+    {
         // We can only support references if the system account is connected.
         if (!empty($this->issuer) && $this->issuer->is_system_account_connected()) {
             $returntypes = $this->get_option('supportedreturntypes');
@@ -920,7 +1002,8 @@ class repository_nextcloud extends repository {
      * @param array $ls Output by WebDAV
      * @return array Moodle-formatted list of directory contents; ready for use as $ret['list'] in get_listings
      */
-    private function get_listing_convert_response($dirpath, $ls) {
+    private function get_listing_convert_response($dirpath, $ls)
+    {
         global $OUTPUT;
         $folders = array();
         $files = array();
@@ -977,7 +1060,8 @@ class repository_nextcloud extends repository {
      *
      * @param array|null $attr Custom attributes to be applied to popup div.
      */
-    private function print_login_popup($attr = null, $embed = false) {
+    private function print_login_popup($attr = null, $embed = false)
+    {
         global $OUTPUT, $PAGE;
 
         if ($embed) {
@@ -991,8 +1075,12 @@ class repository_nextcloud extends repository {
 
         echo $OUTPUT->header();
 
-        $button = new single_button($url, get_string('logintoaccount', 'repository', $this->get_name()),
-            'post', single_button::BUTTON_PRIMARY);
+        $button = new single_button(
+            $url,
+            get_string('logintoaccount', 'repository', $this->get_name()),
+            'post',
+            single_button::BUTTON_PRIMARY
+        );
         $button->add_action(new popup_action('click', $url, 'Login'));
         $button->class = 'mdl-align';
         $button = $OUTPUT->render($button);
@@ -1009,7 +1097,8 @@ class repository_nextcloud extends repository {
      * @param string $path Relative path
      * @return array ret array for use as get_listing's $ret
      */
-    private function get_listing_prepare_response($path) {
+    private function get_listing_prepare_response($path)
+    {
         $ret = [
             // Fetch the list dynamically. An AJAX request is sent to the server as soon as the user opens a folder.
             'dynload' => true,
@@ -1052,7 +1141,8 @@ class repository_nextcloud extends repository {
      * @param int $filestatus
      * @return string
      */
-    public function get_reference_details($reference, $filestatus = 0) {
+    public function get_reference_details($reference, $filestatus = 0)
+    {
         if ($this->disabled) {
             throw new repository_exception('cannotdownload', 'repository');
         }
@@ -1079,7 +1169,8 @@ class repository_nextcloud extends repository {
      * @param stored_file $file
      * @return bool true if synced successfully else false if not ready to sync or reference link not set
      */
-    public function sync_reference(stored_file $file): bool {
+    public function sync_reference(stored_file $file): bool
+    {
         global $CFG;
 
         if ($file->get_referencelastsync() + DAYSECS > time()) {
@@ -1114,12 +1205,14 @@ class repository_nextcloud extends repository {
                 $this->curl->get($url, null, ['timeout' => $CFG->repositorysyncimagetimeout, 'followlocation' => true, 'nobody' => true]);
                 $info = $this->curl->get_info();
 
-                if (isset($info['http_code']) && $info['http_code'] === 200 &&
+                if (
+                    isset($info['http_code']) && $info['http_code'] === 200 &&
                     array_key_exists('download_content_length', $info) &&
-                    $info['download_content_length'] >= 0) {
-                        $filesize = (int)$info['download_content_length'];
-                        $file->set_synchronized(null, $filesize);
-                        return true;
+                    $info['download_content_length'] >= 0
+                ) {
+                    $filesize = (int)$info['download_content_length'];
+                    $file->set_synchronized(null, $filesize);
+                    return true;
                 }
 
                 $file->set_missingsource();
